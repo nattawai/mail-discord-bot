@@ -1,0 +1,33 @@
+# คัดลอกไฟล์นี้เป็น wrangler.toml แล้วใส่ค่าของคุณ (wrangler.toml ไม่ขึ้น git)
+name = "mail-discord-bot"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# เช็กอีเมลใหม่ทุก 1 นาที
+[triggers]
+crons = ["* * * * *"]
+
+# สร้างด้วย: npx wrangler kv namespace create MAIL_BOT_KV  แล้วเอา id มาใส่
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_ID"
+
+# ค่าที่ไม่ใช่ความลับ (ความลับให้ใช้ wrangler secret put ดู README)
+[vars]
+DISCORD_APPLICATION_ID = "REPLACE"
+DISCORD_PUBLIC_KEY = "REPLACE"
+DISCORD_CHANNEL_ID = "REPLACE"
+# Discord user ID ที่อนุญาตให้กดปุ่ม/ใช้คำสั่ง คั่นด้วย ,
+ALLOWED_USER_IDS = "REPLACE"
+# Outlook: "common" = ได้ทั้งบัญชีส่วนตัวและบริษัท, "consumers" = ส่วนตัวเท่านั้น,
+# หรือใส่ Tenant ID ของบริษัท ถ้าแอปลงทะเบียนแบบ single-tenant
+MS_TENANT = "consumers"
+# ใครจะถูก tag ตอนมีเมลใหม่ (user ID คั่นด้วย ,) ใส่ "none" เพื่อปิด
+MENTION_USER_IDS = ""  # ว่าง = tag คนใน ALLOWED_USER_IDS
+# ถ้าอยาก tag ทั้ง role ให้ใส่ role ID
+MENTION_ROLE_ID = ""
+# กด "อ่านแล้ว" หรือ "ลบ" แล้วให้ลบข้อความแจ้งเตือนออกจากช่องอัตโนมัติ ("false" = เก็บไว้แต่เปลี่ยนสี)
+AUTO_CLEAN = "true"
+
+[observability]
+enabled = true
