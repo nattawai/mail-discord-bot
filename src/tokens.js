@@ -1,3 +1,5 @@
+import { tr } from "./i18n.js";
+
 // จัดการ OAuth token ของทุก provider: cache access token, เก็บ refresh token (รวมถึงตัวที่ถูกหมุนใหม่)
 
 const mem = new Map(); // cache ใน isolate เดียวกัน ลดการอ่าน/เขียน KV
@@ -29,7 +31,7 @@ export async function getAccessToken(env, p) {
   }
 
   const refresh = await env.KV.get(K(p, "refresh"));
-  if (!refresh) throw new Error(`ยังไม่ได้เชื่อม ${p.name} — เปิด /setup?key=SETUP_KEY`);
+  if (!refresh) throw new Error(tr(env)("ยังไม่ได้เชื่อม {name} — เปิด /setup?key=SETUP_KEY", { name: p.name }));
 
   const res = await fetch(p.tokenUrl(env), {
     method: "POST",
@@ -37,7 +39,7 @@ export async function getAccessToken(env, p) {
     body: new URLSearchParams({ ...p.clientParams(env), refresh_token: refresh, grant_type: "refresh_token" }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(`${p.name}: ขอ access token ไม่สำเร็จ (${data.error || res.status}) — ลองเชื่อมใหม่ที่ /setup`);
+  if (!res.ok) throw new Error(tr(env)("{name}: ขอ access token ไม่สำเร็จ ({error}) — ลองเชื่อมใหม่ที่ /setup", { name: p.name, error: data.error || res.status }));
   await storeTokens(env, p, data); // Microsoft ส่ง refresh token ใหม่มาทุกครั้ง ต้องเก็บตัวใหม่
   return data.access_token;
 }

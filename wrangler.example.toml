@@ -28,6 +28,9 @@ MENTION_USER_IDS = ""  # ว่าง = tag คนใน ALLOWED_USER_IDS
 MENTION_ROLE_ID = ""
 # กด "อ่านแล้ว" หรือ "ลบ" แล้วให้ลบข้อความแจ้งเตือนออกจากช่องอัตโนมัติ ("false" = เก็บไว้แต่เปลี่ยนสี)
 AUTO_CLEAN = "true"
+# ภาษาของข้อความบอท/หน้า setup: "th" หรือ "en" (คำอธิบายคำสั่งใน Discord แสดงตามภาษาของแอปแต่ละคนอัตโนมัติ)
+# Bot message / setup page language: "th" or "en" (command descriptions follow each user's Discord language automatically)
+LANGUAGE = "en"
 
 [observability]
 enabled = true

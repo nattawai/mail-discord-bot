@@ -2,6 +2,7 @@ import { COMMANDS, discord, ephemeral, json } from "./discord.js";
 import { accountInfo, ensureEmojis, handleInteraction, oauthRedirect, pollAll } from "./bot.js";
 import { TYPES, accountKeys, connectedProviders, keyForEmail, provider, saveAccountKeys } from "./providers/index.js";
 import { K, clearTokens, storeTokens } from "./tokens.js";
+import { tr } from "./i18n.js";
 
 // แพ็กเกจฟรีจำกัด subrequest ประมาณ 50 ครั้งต่อรอบ จึงแบ่งโควตาตามจำนวนบัญชี
 
@@ -22,7 +23,7 @@ export default {
         if (url.pathname === "/oauth/link") {
           const t = url.searchParams.get("t") || "";
           const type = t && (await env.KV.get(`oauth_link:${t}`));
-          if (!type) return html("ลิงก์หมดอายุ", "<p>สั่ง <code>/account add</code> ใน Discord ใหม่อีกครั้ง</p>", 400);
+          if (!type) return html(tr(env)("ลิงก์หมดอายุ"), tr(env)("<p>สั่ง <code>/account add</code> ใน Discord ใหม่อีกครั้ง</p>"), 400);
           await env.KV.delete(`oauth_link:${t}`);
           return Response.redirect(await oauthRedirect(env, type, url.origin), 302);
         }
@@ -73,48 +74,50 @@ const html = (title, bodyHtml, status = 200) =>
 const redirectUri = (url) => `${url.origin}/oauth/callback`;
 
 async function setupPage(url, env) {
+  const T = tr(env);
   const key = encodeURIComponent(url.searchParams.get("key"));
   const accounts = await connectedProviders(env);
   const rows = await Promise.all(
     accounts.map(async (p) => {
       const a = await accountInfo(env, p);
       return `<div class="row"><img src="${esc(p.logo)}" alt=""><div class="grow"><b>${esc(a.label || p.name)}</b><span>${esc(a.email)}</span></div>
-        <a class="btn" href="/oauth/start?key=${key}&p=${p.type}">เชื่อมใหม่</a>
-        <a class="btn danger" href="/setup/disconnect?key=${key}&p=${p.key}" onclick="return confirm('ยกเลิกการเชื่อม ${esc(a.email)}?')">ยกเลิก</a></div>`;
+        <a class="btn" href="/oauth/start?key=${key}&p=${p.type}">${T("เชื่อมใหม่")}</a>
+        <a class="btn danger" href="/setup/disconnect?key=${key}&p=${p.key}" onclick="return confirm('${esc(T("ยกเลิกการเชื่อม {email}?", { email: a.email }))}')">${T("ยกเลิก")}</a></div>`;
     })
   );
   const add = TYPES.map((t) =>
     t.configured(env)
-      ? `<div class="row"><img src="${esc(t.logo)}" alt=""><div class="grow"><b>${t.name}</b></div><a class="btn" href="/oauth/start?key=${key}&p=${t.type}">➕ เพิ่มบัญชี</a></div>`
-      : `<div class="row"><img src="${esc(t.logo)}" alt=""><div class="grow"><b>${t.name}</b><span>ยังไม่ได้ใส่ client ID/secret</span></div></div>`
+      ? `<div class="row"><img src="${esc(t.logo)}" alt=""><div class="grow"><b>${t.name}</b></div><a class="btn" href="/oauth/start?key=${key}&p=${t.type}">${T("➕ เพิ่มบัญชี")}</a></div>`
+      : `<div class="row"><img src="${esc(t.logo)}" alt=""><div class="grow"><b>${t.name}</b><span>${T("ยังไม่ได้ใส่ client ID/secret")}</span></div></div>`
   );
   return html(
-    "ตั้งค่า Mail Discord Bot",
-    `<h2>บัญชีที่เชื่อมแล้ว (${accounts.length})</h2><div class="card">${rows.join("") || '<div class="row">ยังไม่มี</div>'}</div>
-     <h2>เพิ่มบัญชี</h2><div class="card">${add.join("")}</div>
-     <p class="note">จัดการบน Discord ได้เหมือนกัน: <code>/account add</code> <code>/account rename</code> <code>/account remove</code> <code>/account list</code> · แนะนำไม่เกิน 5 บัญชี (โควตาฟรี)</p>
+    T("ตั้งค่า Mail Discord Bot"),
+    `<h2>${T("บัญชีที่เชื่อมแล้ว ({count})", { count: accounts.length })}</h2><div class="card">${rows.join("") || `<div class="row">${T("ยังไม่มี")}</div>`}</div>
+     <h2>${T("เพิ่มบัญชี")}</h2><div class="card">${add.join("")}</div>
+     <p class="note">${T("จัดการบน Discord ได้เหมือนกัน:")} <code>/account add</code> <code>/account rename</code> <code>/account remove</code> <code>/account list</code> · ${T("แนะนำไม่เกิน 5 บัญชี (โควตาฟรี)")}</p>
      <h2>Discord</h2><div class="card">
-       <div class="row"><div class="grow"><b>ส่งข้อความทดสอบเข้าช่อง</b></div><a class="btn" href="/setup/test?key=${key}">ทดสอบ</a></div>
-       <div class="row"><div class="grow"><b>ลงทะเบียนคำสั่ง + โลโก้</b><span>กดใหม่ทุกครั้งที่อัปเดตบอท</span></div><a class="btn" href="/setup/commands?key=${key}">ลงทะเบียน</a></div>
+       <div class="row"><div class="grow"><b>${T("ส่งข้อความทดสอบเข้าช่อง")}</b></div><a class="btn" href="/setup/test?key=${key}">${T("ทดสอบ")}</a></div>
+       <div class="row"><div class="grow"><b>${T("ลงทะเบียนคำสั่ง + โลโก้")}</b><span>${T("กดใหม่ทุกครั้งที่อัปเดตบอท")}</span></div><a class="btn" href="/setup/commands?key=${key}">${T("ลงทะเบียน")}</a></div>
      </div>
-     <p class="note">Redirect URI สำหรับ Google และ Microsoft: <code>${esc(redirectUri(url))}</code></p>`
+     <p class="note">${T("Redirect URI สำหรับ Google และ Microsoft:")} <code>${esc(redirectUri(url))}</code></p>`
   );
 }
 
 async function oauthStart(url, env) {
   const type = url.searchParams.get("p") || "";
-  if (!provider(type).configured(env)) return html("ยังตั้งค่าไม่ครบ", "<p>ยังไม่ได้ใส่ client ID/secret</p>", 400);
+  if (!provider(type).configured(env)) return html(tr(env)("ยังตั้งค่าไม่ครบ"), `<p>${tr(env)("ยังไม่ได้ใส่ client ID/secret")}</p>`, 400);
   return Response.redirect(await oauthRedirect(env, type, url.origin), 302);
 }
 
 async function oauthCallback(url, env) {
+  const T = tr(env);
   const state = url.searchParams.get("state");
   const type = state && (await env.KV.get(`oauth_state:${state}`));
-  if (!type) return html("ลิงก์หมดอายุ", "<p>เริ่มใหม่จากหน้า /setup</p>", 400);
+  if (!type) return html(T("ลิงก์หมดอายุ"), T("<p>เริ่มใหม่จากหน้า /setup</p>"), 400);
   await env.KV.delete(`oauth_state:${state}`);
   const t = provider(type);
   if (url.searchParams.get("error"))
-    return html("ยกเลิกการเชื่อมต่อ", `<p>${esc(url.searchParams.get("error"))}: ${esc(url.searchParams.get("error_description"))}</p>`, 400);
+    return html(T("ยกเลิกการเชื่อมต่อ"), `<p>${esc(url.searchParams.get("error"))}: ${esc(url.searchParams.get("error_description"))}</p>`, 400);
 
   const res = await fetch(t.tokenUrl(env), {
     method: "POST",
@@ -127,9 +130,9 @@ async function oauthCallback(url, env) {
     }),
   });
   const data = await res.json();
-  if (!res.ok) return html("เชื่อมต่อไม่สำเร็จ", `<pre>${esc(JSON.stringify(data, null, 2))}</pre>`, 400);
+  if (!res.ok) return html(T("เชื่อมต่อไม่สำเร็จ"), `<pre>${esc(JSON.stringify(data, null, 2))}</pre>`, 400);
   if (!data.refresh_token)
-    return html("ไม่ได้ refresh token", `<p>ลองยกเลิกสิทธิ์ของแอปนี้ในบัญชี ${t.name} แล้วเชื่อมใหม่อีกครั้ง</p>`, 400);
+    return html(T("ไม่ได้ refresh token"), T("<p>ลองยกเลิกสิทธิ์ของแอปนี้ในบัญชี {name} แล้วเชื่อมใหม่อีกครั้ง</p>", { name: t.name }), 400);
 
   // ใช้ key ชั่วคราวเพื่อถามอีเมลก่อน แล้วค่อยเลือก key จริง (อีเมลซ้ำ = บัญชีเดิม)
   const tmp = provider(`${type}0`);
@@ -144,8 +147,8 @@ async function oauthCallback(url, env) {
   await p.initPoll(env);
   await saveAccountKeys(env, [...(await accountKeys(env)), p.key]);
   return html(
-    `✅ เชื่อม ${p.name} สำเร็จ`,
-    `<p>บัญชี: <b>${esc(email)}</b></p><p>ต่อไปบอทจะแจ้งเตือนอีเมลใหม่เข้า Discord ภายในประมาณ 1 นาที</p><p>ปิดหน้านี้แล้วกลับไปที่ Discord ได้เลย · ตั้งชื่อบัญชีด้วย <code>/account rename</code></p>`
+    T("✅ เชื่อม {name} สำเร็จ", { name: p.name }),
+    T("<p>บัญชี: <b>{email}</b></p><p>ต่อไปบอทจะแจ้งเตือนอีเมลใหม่เข้า Discord ภายในประมาณ 1 นาที</p><p>ปิดหน้านี้แล้วกลับไปที่ Discord ได้เลย · ตั้งชื่อบัญชีด้วย <code>/account rename</code></p>", { email: esc(email) })
   );
 }
 
@@ -155,7 +158,8 @@ async function disconnect(url, env) {
   await clearTokens(env, p);
   await env.KV.delete(K(p, "label"));
   await saveAccountKeys(env, (await accountKeys(env)).filter((k) => k !== p.key));
-  return html(`ยกเลิกการเชื่อม ${esc(email || p.name)} แล้ว`, `<p>ถ้าต้องการยกเลิกสิทธิ์ฝั่ง ${p.name} ด้วย ให้ไปลบที่หน้าตั้งค่าความปลอดภัยของบัญชี</p>`);
+  const T = tr(env);
+  return html(T("ยกเลิกการเชื่อม {account} แล้ว", { account: email || p.name }), T("<p>ถ้าต้องการยกเลิกสิทธิ์ฝั่ง {name} ด้วย ให้ไปลบที่หน้าตั้งค่าความปลอดภัยของบัญชี</p>", { name: p.name }));
 }
 
 async function registerCommands(env) {
@@ -168,14 +172,15 @@ async function registerCommands(env) {
   try {
     emojis = (await ensureEmojis(env)).join(", ");
   } catch (err) {
-    emojis = `สร้างโลโก้ไม่สำเร็จ: ${esc(err.message)}`;
+    emojis = tr(env)("สร้างโลโก้ไม่สำเร็จ: {error}", { error: esc(err.message) });
   }
-  return html("✅ ลงทะเบียนคำสั่งแล้ว", `<p>${result.map((c) => "/" + esc(c.name)).join(", ")}</p><p>โลโก้: ${emojis}</p><p>คำสั่งอาจใช้เวลาสักครู่กว่าจะขึ้นใน Discord</p>`);
+  const T = tr(env);
+  return html(T("✅ ลงทะเบียนคำสั่งแล้ว"), `<p>${result.map((c) => "/" + esc(c.name)).join(", ")}</p><p>${T("โลโก้: {emojis}", { emojis })}</p><p>${T("คำสั่งอาจใช้เวลาสักครู่กว่าจะขึ้นใน Discord")}</p>`);
 }
 
 async function testPost(env) {
-  await discord(env, `/channels/${env.DISCORD_CHANNEL_ID}/messages`, { method: "POST", body: { content: "✅ บอทเชื่อมต่อช่องนี้ได้แล้ว" } });
-  return html("✅ ส่งข้อความทดสอบแล้ว", "<p>เช็กในช่อง Discord ได้เลย</p>");
+  await discord(env, `/channels/${env.DISCORD_CHANNEL_ID}/messages`, { method: "POST", body: { content: tr(env)("✅ บอทเชื่อมต่อช่องนี้ได้แล้ว") } });
+  return html(tr(env)("✅ ส่งข้อความทดสอบแล้ว"), tr(env)("<p>เช็กในช่อง Discord ได้เลย</p>"));
 }
 
 function privacyPage() {

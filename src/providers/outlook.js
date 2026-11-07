@@ -1,6 +1,7 @@
 // Outlook / Microsoft 365 (Microsoft Graph + Microsoft identity platform)
 import { apiFetch, K } from "../tokens.js";
 import { base64UrlEncode } from "../mime.js";
+import { tr } from "../i18n.js";
 
 const API = "https://graph.microsoft.com/v1.0/me";
 const SCOPES = "offline_access User.Read Mail.ReadWrite Mail.Send";
@@ -48,7 +49,7 @@ const outlook = {
   },
   async resolve(env, ref) {
     const id = await env.KV.get(K(outlook, `ref:${ref}`));
-    if (!id) throw new Error("ข้อความนี้เก่าเกินไปแล้ว (เกิน 90 วัน) — เปิดใน Outlook แทน");
+    if (!id) throw new Error(tr(env)("ข้อความนี้เก่าเกินไปแล้ว (เกิน 90 วัน) — เปิดใน Outlook แทน"));
     return id;
   },
 

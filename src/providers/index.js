@@ -8,7 +8,7 @@ export const TYPES = [createGmail("g"), createOutlook("o")]; // ใช้เป�
 
 const cache = new Map();
 export function provider(key) {
-  if (!/^[go]\d*$/.test(key || "")) throw new Error(`ไม่รู้จักบัญชี "${key}"`);
+  if (!/^[go]\d*$/.test(key || "")) throw new Error(`Unknown account "${key}"`);
   if (!cache.has(key)) cache.set(key, FACTORY[key[0]](key));
   return cache.get(key);
 }

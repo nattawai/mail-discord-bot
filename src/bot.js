@@ -21,6 +21,7 @@ import {
 } from "./discord.js";
 import { TYPES, accountKeys, connectedProviders, provider, saveAccountKeys } from "./providers/index.js";
 import { K, clearTokens, isConnected } from "./tokens.js";
+import { tr } from "./i18n.js";
 
 const CHUNK = 4000;
 const autoClean = (env) => String(env.AUTO_CLEAN ?? "true").toLowerCase() !== "false";
@@ -38,6 +39,7 @@ async function getEmoji(env, type) {
 }
 
 export async function ensureEmojis(env) {
+  const T = tr(env);
   const app = env.DISCORD_APPLICATION_ID;
   const existing = (await discord(env, `/applications/${app}/emojis`)).items || [];
   const out = [];
@@ -46,7 +48,7 @@ export async function ensureEmojis(env) {
     let e = existing.find((x) => x.name === name);
     if (!e) {
       const img = await fetch(t.logo);
-      if (!img.ok) throw new Error(`โหลดโลโก้ ${t.name} ไม่ได้ (${img.status})`);
+      if (!img.ok) throw new Error(T("โหลดโลโก้ {name} ไม่ได้ ({status})", { name: t.name, status: img.status }));
       const bytes = new Uint8Array(await img.arrayBuffer());
       let bin = "";
       bytes.forEach((b) => (bin += String.fromCharCode(b)));
@@ -62,7 +64,7 @@ export async function ensureEmojis(env) {
 
 export async function oauthRedirect(env, type, origin) {
   const t = provider(type);
-  if (!t.configured(env)) throw new Error(`ยังไม่ได้ใส่ client ID/secret ของ ${t.name}`);
+  if (!t.configured(env)) throw new Error(tr(env)("ยังไม่ได้ใส่ client ID/secret ของ {name}", { name: t.name }));
   const state = crypto.randomUUID();
   await env.KV.put(`oauth_state:${state}`, t.type, { expirationTtl: 600 });
   return t.authUrl(env, `${origin}/oauth/callback`, state);
@@ -75,11 +77,12 @@ export async function handleInteraction(request, env, ctx) {
   if (!(await verifyRequest(request, body, env.DISCORD_PUBLIC_KEY))) return new Response("Bad signature", { status: 401 });
 
   const it = JSON.parse(body);
+  const T = tr(env);
   if (it.type === InteractionType.PING) return json({ type: ResponseType.PONG });
 
   const userId = it.member?.user?.id || it.user?.id;
   const allowed = (env.ALLOWED_USER_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  if (!allowed.includes(userId)) return ephemeral("⛔ คุณไม่มีสิทธิ์ใช้งานบอทนี้");
+  if (!allowed.includes(userId)) return ephemeral(T("⛔ คุณไม่มีสิทธิ์ใช้งานบอทนี้"));
 
   const origin = new URL(request.url).origin;
   const webhook = `/webhooks/${it.application_id}/${it.token}`;
@@ -114,8 +117,8 @@ export async function handleInteraction(request, env, ctx) {
     switch (it.data.name) {
       case "send": {
         const p = chosen ? provider(chosen) : (await connectedProviders(env))[0];
-        if (!p || !(await isConnected(env, p))) return ephemeral("ยังไม่ได้เชื่อมบัญชีนี้ — ใช้ `/account add`");
-        return json(sendModal(p));
+        if (!p || !(await isConnected(env, p))) return ephemeral(T("ยังไม่ได้เชื่อมบัญชีนี้ — ใช้ `/account add`"));
+        return json(sendModal(p, T));
       }
       case "inbox":
         return later(ResponseType.DEFERRED_MESSAGE, () => showInbox(env, it, chosen));
@@ -124,7 +127,7 @@ export async function handleInteraction(request, env, ctx) {
       case "account":
         return accountCommand(env, it, origin, later);
     }
-    return ephemeral("ไม่รู้จักคำสั่งนี้");
+    return ephemeral(T("ไม่รู้จักคำสั่งนี้"));
   }
 
   if (it.type === InteractionType.COMPONENT) {
@@ -135,10 +138,10 @@ export async function handleInteraction(request, env, ctx) {
         const p = provider(pk);
         const a = await accountInfo(env, p);
         await removeAccount(env, p);
-        await editOriginal(env, it, { content: `✅ ยกเลิกการเชื่อม **${a.display}** แล้ว`, embeds: [], components: [] });
+        await editOriginal(env, it, { content: T("✅ ยกเลิกการเชื่อม **{account}** แล้ว", { account: a.display }), embeds: [], components: [] });
       });
     }
-    if (action === "cancel") return json({ type: 7, data: { content: "ยกเลิกแล้ว", embeds: [], components: [] } });
+    if (action === "cancel") return json({ type: 7, data: { content: T("ยกเลิกแล้ว"), embeds: [], components: [] } });
 
     const p = provider(pk);
     const who = it.member?.user?.username || it.user?.username || "";
@@ -152,25 +155,25 @@ export async function handleInteraction(request, env, ctx) {
         if (cleanup && isChannelMsg && autoClean(env)) {
           await discord(env, `/channels/${it.channel_id}/messages/${it.message.id}`, { method: "DELETE" });
           if (state === "trashed")
-            await followup({ content: `🗑️ ลบ **${old.title || "อีเมล"}** แล้ว`, components: mailButtons(p, ref, existingLink(it.message), "trashed") });
+            await followup({ content: T("🗑️ ลบ **{subject}** แล้ว", { subject: old.title || T("อีเมล") }), components: mailButtons(p, ref, existingLink(it.message), "trashed", { T }) });
           return;
         }
-        await editOriginal(env, it, { embeds: [restyleEmbed(old, state, note)], components: mailButtons(p, ref, existingLink(it.message), state) });
+        await editOriginal(env, it, { embeds: [restyleEmbed(old, state, note)], components: mailButtons(p, ref, existingLink(it.message), state, { T }) });
       });
 
     switch (action) {
       case "read":
         return later(ResponseType.DEFERRED_MESSAGE, () => readFull(env, it, p, ref, followup));
       case "reply":
-        return json(replyModal(p, ref));
+        return json(replyModal(p, ref, T));
       case "seen":
-        return onMail("read", `✅ อ่านแล้ว โดย ${who}`, (id) => p.markRead(env, id), { cleanup: true });
+        return onMail("read", T("✅ อ่านแล้ว โดย {who}", { who }), (id) => p.markRead(env, id), { cleanup: true });
       case "trash":
-        return onMail("trashed", `🗑️ ย้ายไปถังขยะแล้ว โดย ${who}`, (id) => p.trash(env, id), { cleanup: true });
+        return onMail("trashed", T("🗑️ ย้ายไปถังขยะแล้ว โดย {who}", { who }), (id) => p.trash(env, id), { cleanup: true });
       case "untrash":
-        return onMail("read", `↩️ กู้คืนแล้ว โดย ${who}`, (id) => p.untrash(env, id));
+        return onMail("read", T("↩️ กู้คืนแล้ว โดย {who}", { who }), (id) => p.untrash(env, id));
     }
-    return ephemeral("ไม่รู้จักปุ่มนี้");
+    return ephemeral(T("ไม่รู้จักปุ่มนี้"));
   }
 
   if (it.type === InteractionType.MODAL_SUBMIT) {
@@ -180,12 +183,12 @@ export async function handleInteraction(request, env, ctx) {
     if (kind === "reply_modal")
       return later(ResponseType.DEFERRED_MESSAGE, async () => {
         const to = await p.reply(env, await p.resolve(env, ref), v.body);
-        await editOriginal(env, it, { content: `✅ ตอบกลับไปที่ **${to}** แล้ว` });
+        await editOriginal(env, it, { content: T("✅ ตอบกลับไปที่ **{to}** แล้ว", { to }) });
       });
     if (kind === "send_modal") return later(ResponseType.DEFERRED_MESSAGE, () => sendNew(env, it, p, v));
   }
 
-  return ephemeral("ไม่รู้จักคำขอนี้");
+  return ephemeral(T("ไม่รู้จักคำขอนี้"));
 }
 
 // ───────────────────────── อ่านเต็ม (ไม่ตัดข้อความ) ─────────────────────────
@@ -204,38 +207,41 @@ export function chunkText(text, size) {
 }
 
 async function readFull(env, it, p, ref, followup) {
+  const T = tr(env);
   const [mail, a] = await Promise.all([p.resolve(env, ref).then((id) => p.getFull(env, id)), accountInfo(env, p)]);
-  const chunks = chunkText(mail.text || "(ไม่มีเนื้อหาแบบข้อความ)", CHUNK);
-  const head = [`${a.emoji} : **${a.email}**${a.label ? `  ·  ${a.label}` : ""}`, `**ผู้ส่ง:** ${mail.from || "-"}`, `**ถึง:** ${mail.to || "-"}`];
-  if (mail.attachments.length) head.push(`**ไฟล์แนบ:** ${mail.attachments.join(", ")} (เปิดใน ${p.name})`);
-  const header = { color: p.color, title: (mail.subject || "(ไม่มีหัวเรื่อง)").slice(0, 256), description: head.join("\n").slice(0, 1500) };
+  const chunks = chunkText(mail.text || T("(ไม่มีเนื้อหาแบบข้อความ)"), CHUNK);
+  const head = [`${a.emoji} : **${a.email}**${a.label ? `  ·  ${a.label}` : ""}`, T("**ผู้ส่ง:** {from}", { from: mail.from || "-" }), T("**ถึง:** {to}", { to: mail.to || "-" })];
+  if (mail.attachments.length) head.push(T("**ไฟล์แนบ:** {files} (เปิดใน {name})", { files: mail.attachments.join(", "), name: p.name }));
+  const header = { color: p.color, title: (mail.subject || T("(ไม่มีหัวเรื่อง)")).slice(0, 256), description: head.join("\n").slice(0, 1500) };
 
   // ข้อความแรก: หัวเมล + เนื้อหาส่วนแรก (รวมไม่เกิน 6,000 ตัวอักษรต่อข้อความ)
   const MAX_MSGS = 8;
   const shown = chunks.slice(0, MAX_MSGS);
   const files = chunks.length > MAX_MSGS ? [{ name: "email.txt", content: mail.text }] : [];
-  await editOriginal(env, it, { embeds: [header, { color: p.color, description: shown[0] }], components: readViewButtons(p, ref, mail.link) }, files);
+  await editOriginal(env, it, { embeds: [header, { color: p.color, description: shown[0] }], components: readViewButtons(p, ref, mail.link, T) }, files);
   for (const [i, c] of shown.slice(1).entries()) {
-    await followup({ embeds: [{ color: p.color, description: c, footer: { text: `ส่วนที่ ${i + 2}/${chunks.length}` } }] });
+    await followup({ embeds: [{ color: p.color, description: c, footer: { text: T("ส่วนที่ {n}/{total}", { n: i + 2, total: chunks.length }) } }] });
   }
-  if (files.length) await followup({ content: `เนื้อหายาว ${chunks.length} ส่วน — ส่วนที่เหลืออยู่ในไฟล์ email.txt ด้านบน` });
+  if (files.length) await followup({ content: T("เนื้อหายาว {total} ส่วน — ส่วนที่เหลืออยู่ในไฟล์ email.txt ด้านบน", { total: chunks.length }) });
 }
 
 async function sendNew(env, it, p, { to, subject, body }) {
+  const T = tr(env);
   const list = to.split(",").map((s) => s.trim()).filter(Boolean);
   if (!list.length || list.some((x) => !/^[^\s@<>,]+@[^\s@<>,]+\.[^\s@<>,]+$/.test(x))) {
-    await editOriginal(env, it, { content: `❌ อีเมลผู้รับไม่ถูกต้อง: ${to}` });
+    await editOriginal(env, it, { content: T("❌ อีเมลผู้รับไม่ถูกต้อง: {to}", { to }) });
     return;
   }
   await p.send(env, { to: list, subject, body });
   const a = await accountInfo(env, p);
-  await editOriginal(env, it, { content: `✅ ส่งอีเมล "${subject}" ไปที่ **${list.join(", ")}** แล้ว (จาก ${a.display})` });
+  await editOriginal(env, it, { content: T('✅ ส่งอีเมล "{subject}" ไปที่ **{to}** แล้ว (จาก {account})', { subject, to: list.join(", "), account: a.display }) });
 }
 
 async function showInbox(env, it, chosen) {
+  const T = tr(env);
   const providers = (chosen ? [provider(chosen)] : await connectedProviders(env)).slice(0, 5);
   if (!providers.length) {
-    await editOriginal(env, it, { content: "ยังไม่ได้เชื่อมบัญชีอีเมลใด ๆ — ใช้ `/account add`" });
+    await editOriginal(env, it, { content: T("ยังไม่ได้เชื่อมบัญชีอีเมลใด ๆ — ใช้ `/account add`") });
     return;
   }
   const perProvider = Math.min(5, Math.floor(10 / providers.length));
@@ -247,18 +253,18 @@ async function showInbox(env, it, chosen) {
   for (const [i, p] of providers.entries()) {
     const { items, total } = results[i];
     const a = await accountInfo(env, p);
-    lines.push(`${a.emoji} **${a.display}** — ยังไม่ได้อ่าน ${total} ฉบับ`);
+    lines.push(T("{emoji} **{account}** — ยังไม่ได้อ่าน {total} ฉบับ", { emoji: a.emoji, account: a.display, total }));
     const buttons = [];
     for (const [n, mail] of items.entries()) {
       const ref = await p.ref(env, mail.id);
-      const e = mailEmbed(p, null, mail);
+      const e = mailEmbed(p, null, mail, { T });
       e.title = `${n + 1}. ${e.title}`.slice(0, 256);
       embeds.push(e);
       buttons.push({ type: 2, style: 1, label: `📖 ${(a.label || a.email.split("@")[0]).slice(0, 20)} ${n + 1}`, custom_id: `read:${p.key}:${ref}` });
     }
     if (buttons.length) components.push({ type: 1, components: buttons });
   }
-  await editOriginal(env, it, { content: lines.join("\n") + (embeds.length ? "" : "\n📭 ไม่มีอีเมลค้าง"), embeds, components });
+  await editOriginal(env, it, { content: lines.join("\n") + (embeds.length ? "" : "\n" + T("📭 ไม่มีอีเมลค้าง")), embeds, components });
 }
 
 // ───────────────────────── /account ─────────────────────────
@@ -270,74 +276,76 @@ async function removeAccount(env, p) {
 }
 
 async function accountCommand(env, it, origin, later) {
+  const T = tr(env);
   const { sub } = commandOptions(it);
   const val = (name) => optionValue(it, name);
 
   if (sub === "list") {
     const accounts = await connectedProviders(env);
-    if (!accounts.length) return ephemeral("ยังไม่มีบัญชีที่เชื่อมไว้ — ใช้ `/account add`");
+    if (!accounts.length) return ephemeral(T("ยังไม่มีบัญชีที่เชื่อมไว้ — ใช้ `/account add`"));
     const rows = await Promise.all(
       accounts.map(async (p) => {
         const a = await accountInfo(env, p);
-        return `${a.emoji} **${a.label || "(ยังไม่ตั้งชื่อ)"}** — ${a.email}`;
+        return `${a.emoji} **${a.label || T("(ยังไม่ตั้งชื่อ)")}** — ${a.email}`;
       })
     );
-    return ephemeral(`**บัญชีที่เชื่อมไว้ (${accounts.length})**\n${rows.join("\n")}\n\nตั้งชื่อ: \`/account rename\` · เพิ่ม: \`/account add\` · ยกเลิก: \`/account remove\``);
+    return ephemeral(`${T("**บัญชีที่เชื่อมไว้ ({count})**", { count: accounts.length })}\n${rows.join("\n")}\n\n${T("ตั้งชื่อ: `/account rename` · เพิ่ม: `/account add` · ยกเลิก: `/account remove`")}`);
   }
 
   if (sub === "add") {
     const type = val("type");
     const t = provider(type);
-    if (!t.configured(env)) return ephemeral(`ยังไม่ได้ใส่ client ID/secret ของ ${t.name} ใน Worker`);
+    if (!t.configured(env)) return ephemeral(T("ยังไม่ได้ใส่ client ID/secret ของ {name} ใน Worker", { name: t.name }));
     const token = crypto.randomUUID();
     await env.KV.put(`oauth_link:${token}`, type, { expirationTtl: 600 });
     return json({
       type: ResponseType.MESSAGE,
       data: {
         flags: EPHEMERAL,
-        content: `กดปุ่มด้านล่างเพื่อเชื่อมบัญชี ${t.name} (ลิงก์ใช้ได้ครั้งเดียวภายใน 10 นาที)\nถ้าเลือกบัญชีที่เชื่อมไว้แล้ว จะเป็นการเชื่อมใหม่ให้บัญชีเดิม`,
-        components: [{ type: 1, components: [{ type: 2, style: 5, label: `เชื่อม ${t.name}`, url: `${origin}/oauth/link?t=${token}` }] }],
+        content: T("กดปุ่มด้านล่างเพื่อเชื่อมบัญชี {name} (ลิงก์ใช้ได้ครั้งเดียวภายใน 10 นาที)\nถ้าเลือกบัญชีที่เชื่อมไว้แล้ว จะเป็นการเชื่อมใหม่ให้บัญชีเดิม", { name: t.name }),
+        components: [{ type: 1, components: [{ type: 2, style: 5, label: T("เชื่อม {name}", { name: t.name }), url: `${origin}/oauth/link?t=${token}` }] }],
       },
     });
   }
 
   if (sub === "rename") {
     const p = provider(val("account"));
-    if (!(await isConnected(env, p))) return ephemeral("ไม่พบบัญชีนี้");
+    if (!(await isConnected(env, p))) return ephemeral(T("ไม่พบบัญชีนี้"));
     const name = String(val("name") || "").trim();
     if (!name || name === "-") await env.KV.delete(K(p, "label"));
     else await env.KV.put(K(p, "label"), name.slice(0, 40));
     const a = await accountInfo(env, p);
-    return ephemeral(name && name !== "-" ? `✅ ตั้งชื่อ **${a.email}** เป็น **${a.label}** แล้ว` : `✅ ลบชื่อเล่นของ ${a.email} แล้ว`);
+    return ephemeral(name && name !== "-" ? T("✅ ตั้งชื่อ **{email}** เป็น **{label}** แล้ว", a) : T("✅ ลบชื่อเล่นของ {email} แล้ว", a));
   }
 
   if (sub === "remove") {
     const p = provider(val("account"));
-    if (!(await isConnected(env, p))) return ephemeral("ไม่พบบัญชีนี้");
+    if (!(await isConnected(env, p))) return ephemeral(T("ไม่พบบัญชีนี้"));
     const a = await accountInfo(env, p);
     return json({
       type: ResponseType.MESSAGE,
       data: {
         flags: EPHEMERAL,
-        content: `ยืนยันยกเลิกการเชื่อม **${a.display}**? บอทจะหยุดแจ้งเตือนบัญชีนี้`,
+        content: T("ยืนยันยกเลิกการเชื่อม **{account}**? บอทจะหยุดแจ้งเตือนบัญชีนี้", { account: a.display }),
         components: [
           {
             type: 1,
             components: [
-              { type: 2, style: 4, label: "ยกเลิกการเชื่อม", custom_id: `acctdel:${p.key}` },
-              { type: 2, style: 2, label: "ไม่ใช่", custom_id: "cancel:x" },
+              { type: 2, style: 4, label: T("ยกเลิกการเชื่อม"), custom_id: `acctdel:${p.key}` },
+              { type: 2, style: 2, label: T("ไม่ใช่"), custom_id: "cancel:x" },
             ],
           },
         ],
       },
     });
   }
-  return ephemeral("ไม่รู้จักคำสั่งย่อยนี้");
+  return ephemeral(T("ไม่รู้จักคำสั่งย่อยนี้"));
 }
 
 // ───────────────────────── /clear ─────────────────────────
 
 async function clearChannel(env, it, all) {
+  const T = tr(env);
   const channel = it.channel_id;
   const me = await discord(env, "/users/@me");
   const twoWeeks = Date.now() - 13.5 * 24 * 3600 * 1000;
@@ -378,9 +386,9 @@ async function clearChannel(env, it, all) {
     }
     await discord(env, `/channels/${channel}/messages/${id}`, { method: "DELETE" }).then(() => deleted++).catch(() => {});
   }
-  const kept = all ? "" : " (เก็บเมลที่ยังไม่ได้อ่านไว้ ใช้ `/clear all:True` ถ้าจะลบทั้งหมด)";
-  const more = left ? `\nยังเหลืออีก ${left} ข้อความ สั่ง \`/clear\` อีกครั้งได้ (ให้สิทธิ์ Manage Messages กับบอทจะลบได้เร็วขึ้น)` : "";
-  await editOriginal(env, it, { content: `🧹 ลบข้อความแล้ว ${deleted} ข้อความ${kept}${more}` });
+  const kept = all ? "" : T(" (เก็บเมลที่ยังไม่ได้อ่านไว้ ใช้ `/clear all:True` ถ้าจะลบทั้งหมด)");
+  const more = left ? T("\nยังเหลืออีก {count} ข้อความ สั่ง `/clear` อีกครั้งได้ (ให้สิทธิ์ Manage Messages กับบอทจะลบได้เร็วขึ้น)", { count: left }) : "";
+  await editOriginal(env, it, { content: T("🧹 ลบข้อความแล้ว {count} ข้อความ", { count: deleted }) + kept + more });
 }
 
 // ───────────────────────── แจ้งเตือนเมลใหม่ (cron ทุก 1 นาที) ─────────────────────────
@@ -408,6 +416,7 @@ export async function pollAll(env) {
 }
 
 async function pollProvider(env, p, max) {
+  const T = tr(env);
   const { items, more } = await p.poll(env, max);
   if (!items.length && !more) return;
   const a = await accountInfo(env, p);
@@ -418,9 +427,9 @@ async function pollProvider(env, p, max) {
       method: "POST",
       body: {
         // ข้อความนอก embed ใช้เป็นตัวอย่างใน push บนมือถือ
-        content: `${mention.text}📬 ${(a.label || a.email)}: ${mail.subject || "(ไม่มีหัวเรื่อง)"}`.slice(0, 300),
-        embeds: [mailEmbed(p, a, mail)],
-        components: mailButtons(p, ref, mail.link),
+        content: `${mention.text}📬 ${(a.label || a.email)}: ${mail.subject || T("(ไม่มีหัวเรื่อง)")}`.slice(0, 300),
+        embeds: [mailEmbed(p, a, mail, { T })],
+        components: mailButtons(p, ref, mail.link, "unread", { T }),
         allowed_mentions: mention.allowed,
       },
     });
@@ -428,7 +437,7 @@ async function pollProvider(env, p, max) {
   if (more > 0) {
     await discord(env, `/channels/${env.DISCORD_CHANNEL_ID}/messages`, {
       method: "POST",
-      body: { content: `…และยังมีอีเมลใหม่ใน ${a.display} อีก${more > 1 ? ` ${more}` : ""} ฉบับ ใช้ \`/inbox\` เพื่อดู` },
+      body: { content: T("…และยังมีอีเมลใหม่ใน {account} อีก{count} ฉบับ ใช้ `/inbox` เพื่อดู", { account: a.display, count: more > 1 ? ` ${more}` : "" }) },
     });
   }
 }
