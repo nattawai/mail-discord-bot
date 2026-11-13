@@ -52,7 +52,16 @@ export async function discord(env, path, { method = "GET", body, form } = {}) {
   if (!path.startsWith("/webhooks/")) headers.Authorization = `Bot ${env.DISCORD_BOT_TOKEN}`;
   if (body) headers["Content-Type"] = "application/json";
   const res = await fetch(API + path, { method, headers, body: form || (body ? JSON.stringify(body) : undefined) });
-  if (!res.ok) throw new Error(`Discord API ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let code = "";
+    try {
+      code = JSON.parse(text).code ?? "";
+    } catch {}
+    const err = new Error(`Discord API ${res.status}: ${text.slice(0, 200)}`);
+    Object.assign(err, { service: "Discord", status: res.status, code: String(code) });
+    throw err;
+  }
   return res.status === 204 ? {} : res.json();
 }
 

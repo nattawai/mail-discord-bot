@@ -1,8 +1,9 @@
 import { COMMANDS, discord, ephemeral, json } from "./discord.js";
 import { accountInfo, ensureEmojis, handleInteraction, oauthRedirect, pollAll } from "./bot.js";
 import { TYPES, accountKeys, connectedProviders, keyForEmail, provider, saveAccountKeys } from "./providers/index.js";
-import { K, clearTokens, storeTokens } from "./tokens.js";
+import { K, clearTokens, fetchJson, storeTokens } from "./tokens.js";
 import { tr } from "./i18n.js";
+import { explainError } from "./errors.js";
 
 // แพ็กเกจฟรีจำกัด subrequest ประมาณ 50 ครั้งต่อรอบ จึงแบ่งโควตาตามจำนวนบัญชี
 
@@ -11,7 +12,7 @@ export default {
     const url = new URL(request.url);
     try {
       if (request.method === "POST" && url.pathname === "/")
-        return await handleInteraction(request, env, ctx).catch((err) => ephemeral(`❌ ${err.message}`.slice(0, 1900)));
+        return await handleInteraction(request, env, ctx).catch((err) => ephemeral(explainError(err, tr(env)).slice(0, 1900)));
       if (request.method === "GET") {
         if (url.pathname === "/")
           return html(
@@ -119,7 +120,7 @@ async function oauthCallback(url, env) {
   if (url.searchParams.get("error"))
     return html(T("ยกเลิกการเชื่อมต่อ"), `<p>${esc(url.searchParams.get("error"))}: ${esc(url.searchParams.get("error_description"))}</p>`, 400);
 
-  const res = await fetch(t.tokenUrl(env), {
+  const { res, data } = await fetchJson(t.tokenUrl(env), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -129,7 +130,6 @@ async function oauthCallback(url, env) {
       grant_type: "authorization_code",
     }),
   });
-  const data = await res.json();
   if (!res.ok) return html(T("เชื่อมต่อไม่สำเร็จ"), `<pre>${esc(JSON.stringify(data, null, 2))}</pre>`, 400);
   if (!data.refresh_token)
     return html(T("ไม่ได้ refresh token"), T("<p>ลองยกเลิกสิทธิ์ของแอปนี้ในบัญชี {name} แล้วเชื่อมใหม่อีกครั้ง</p>", { name: t.name }), 400);

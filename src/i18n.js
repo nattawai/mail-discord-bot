@@ -2,6 +2,32 @@
 // ตัวแปรในข้อความเขียนเป็น {name} แล้วส่งค่าผ่าน T("…{name}…", { name })
 
 export const EN = {
+  "เซิร์ฟเวอร์อีเมล": "the mail server",
+  "ทำรายการไม่สำเร็จ": "That didn't work",
+  "สาเหตุ:": "Why:",
+  "วิธีแก้:": "Fix:",
+  "บอทไม่มีสิทธิ์ทำสิ่งนี้ในช่องนี้": "The bot doesn't have permission to do this in this channel.",
+  "ให้สิทธิ์ View Channel, Send Messages และ Manage Messages กับบอทในช่องนี้": "Give the bot View Channel, Send Messages and Manage Messages in this channel.",
+  "ข้อความใน Discord ถูกลบไปแล้ว": "The Discord message was already deleted.",
+  "ไม่ต้องทำอะไร": "Nothing to do.",
+  "Discord จำกัดความถี่ เพราะส่งคำขอถี่เกินไป": "Discord is rate limiting the bot because of too many requests.",
+  "รอสักครู่แล้วลองใหม่": "Wait a moment and try again.",
+  "เซิร์ฟเวอร์ Discord ขัดข้องชั่วคราว": "Discord is having a temporary problem.",
+  "ลองใหม่อีกครั้งในอีกสักครู่": "Try again in a moment.",
+  "สิทธิ์เข้าบัญชี {name} หมดอายุหรือถูกยกเลิก (เช่น เปลี่ยนรหัสผ่าน หรือไม่ได้ใช้นาน)": "Access to the {name} account expired or was revoked (for example after a password change or a long time unused).",
+  "สั่ง /account add เพื่อเชื่อมบัญชีนี้ใหม่ บัญชีเดิมและชื่อเล่นจะยังอยู่": "Run /account add to reconnect it. The account keeps its nickname.",
+  "{name} ไม่อนุญาตให้บอททำสิ่งนี้ (สิทธิ์ไม่ครบ)": "{name} doesn't allow the bot to do this (missing permission).",
+  "สั่ง /account add แล้วติ๊กอนุญาตให้ครบทุกข้อตอนเชื่อม": "Run /account add and allow every permission when connecting.",
+  "ไม่พบอีเมลนี้แล้ว อาจถูกลบหรือย้ายจากแอปอีเมลไปก่อน": "This email no longer exists. It was probably deleted or moved in your mail app.",
+  "กด ✅ เพื่อปิดแจ้งเตือนนี้ หรือสั่ง /clear": "Press ✅ to dismiss this notification, or run /clear.",
+  "{name} จำกัดความถี่ เพราะเรียกใช้บ่อยเกินไป": "{name} is rate limiting the bot because of too many requests.",
+  "รอประมาณ 1 นาทีแล้วลองใหม่": "Wait about a minute and try again.",
+  "เซิร์ฟเวอร์ {name} ขัดข้องชั่วคราว ({status}) ไม่ใช่ปัญหาของบอท": "{name} is having a temporary server problem ({status}). It isn't a bot problem.",
+  "ลองกดใหม่อีกครั้งในอีกสักครู่": "Press the button again in a moment.",
+  "ติดต่อ {name} ไม่ได้ (เครือข่ายขัดข้อง)": "Couldn't reach {name} (network problem).",
+  "ไม่ทราบสาเหตุแน่ชัด": "Unknown cause.",
+  "ลองใหม่อีกครั้ง ถ้ายังไม่ได้ให้ดู log ด้วย npx wrangler tail": "Try again. If it keeps failing, check the log with npx wrangler tail.",
+  "ยังไม่ได้เชื่อม {name} — สั่ง /account add เพื่อเชื่อมบัญชี": "{name} isn't connected. Run /account add to connect it.",
   // แจ้งเตือน / embed
   "**ผู้ส่ง:** {from}": "**From:** {from}",
   "**ถึง:** {to}": "**To:** {to}",
@@ -67,8 +93,6 @@ export const EN = {
   "\nยังเหลืออีก {count} ข้อความ สั่ง `/clear` อีกครั้งได้ (ให้สิทธิ์ Manage Messages กับบอทจะลบได้เร็วขึ้น)":
     "\n{count} messages left — run `/clear` again (give the bot Manage Messages to delete faster)",
   // errors
-  "ยังไม่ได้เชื่อม {name} — เปิด /setup?key=SETUP_KEY": "{name} is not connected — open /setup?key=SETUP_KEY",
-  "{name}: ขอ access token ไม่สำเร็จ ({error}) — ลองเชื่อมใหม่ที่ /setup": "{name}: could not get an access token ({error}) — reconnect it in /setup",
   "ข้อความนี้เก่าเกินไปแล้ว (เกิน 90 วัน) — เปิดใน Outlook แทน": "This message is too old (over 90 days) — open it in Outlook instead",
   "โหลดโลโก้ {name} ไม่ได้ ({status})": "Could not download the {name} logo ({status})",
   "ยังไม่ได้ใส่ client ID/secret ของ {name}": "The {name} client ID/secret is not set",

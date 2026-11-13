@@ -49,7 +49,7 @@ const outlook = {
   },
   async resolve(env, ref) {
     const id = await env.KV.get(K(outlook, `ref:${ref}`));
-    if (!id) throw new Error(tr(env)("ข้อความนี้เก่าเกินไปแล้ว (เกิน 90 วัน) — เปิดใน Outlook แทน"));
+    if (!id) throw Object.assign(new Error(tr(env)("ข้อความนี้เก่าเกินไปแล้ว (เกิน 90 วัน) — เปิดใน Outlook แทน")), { friendly: true });
     return id;
   },
 

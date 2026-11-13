@@ -19,6 +19,7 @@ import {
   sendModal,
   verifyRequest,
 } from "./discord.js";
+import { explainError } from "./errors.js";
 import { TYPES, accountKeys, connectedProviders, provider, saveAccountKeys } from "./providers/index.js";
 import { K, clearTokens, isConnected } from "./tokens.js";
 import { tr } from "./i18n.js";
@@ -93,7 +94,7 @@ export async function handleInteraction(request, env, ctx) {
     ctx.waitUntil(
       task().catch(async (err) => {
         console.error(err);
-        const msg = { content: `❌ ${err.message}`.slice(0, 1900), flags: EPHEMERAL };
+        const msg = { content: explainError(err, T).slice(0, 1900), flags: EPHEMERAL };
         if (responseType === ResponseType.DEFERRED_MESSAGE) await editOriginal(env, it, msg).catch(() => {});
         else await followup(msg).catch(() => {});
       })
