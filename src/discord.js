@@ -173,6 +173,7 @@ const accountOpt = (en, th, required = false) => ({ type: 3, name: "account", ..
 
 export const COMMANDS = [
   { name: "send", type: 1, ...d("Send a new email", "ส่งอีเมลใหม่"), options: [accountOpt("Send from which account (default: first)", "ส่งจากบัญชีไหน (ไม่เลือก = บัญชีแรก)")] },
+  { name: "status", type: 1, ...d("Check which services are working or down", "เช็กว่าบริการไหนทำงานปกติหรือล่มอยู่") },
   { name: "inbox", type: 1, ...d("Show unread email", "ดูอีเมลที่ยังไม่ได้อ่าน"), options: [accountOpt("Only this account (default: all)", "ดูเฉพาะบัญชีไหน (ไม่เลือก = ทุกบัญชี)")] },
   {
     name: "clear",

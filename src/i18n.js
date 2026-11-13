@@ -2,6 +2,23 @@
 // ตัวแปรในข้อความเขียนเป็น {name} แล้วส่งค่าผ่าน T("…{name}…", { name })
 
 export const EN = {
+  "Bot token ของ Discord ใช้ไม่ได้": "The Discord bot token isn't valid.",
+  "รีเซ็ต token ใน Developer Portal แล้วใส่ใหม่ด้วย npx wrangler secret put DISCORD_BOT_TOKEN": "Reset the token in the Developer Portal and set it again with npx wrangler secret put DISCORD_BOT_TOKEN.",
+  "{name} ตอบช้าเกินไป": "{name} took too long to respond.",
+  "**🩺 สถานะระบบ** · เช็กเมื่อ <t:{time}:T>": "**🩺 System status** · checked <t:{time}:T>",
+  "ทำงานปกติ": "working",
+  "อ่านข้อมูลได้": "readable",
+  "ตัวตั้งเวลาดึงเมล (cron)": "Mail check timer (cron)",
+  "ยังไม่มีข้อมูล รอประมาณ 10 นาทีหลัง deploy": "no data yet. Wait about 10 minutes after deploying.",
+  "ไม่ได้ทำงานมาตั้งแต่ <t:{time}:R>": "hasn't run since <t:{time}:R>",
+  "เช็ก Triggers ของ Worker ใน Cloudflare dashboard แล้ว deploy ใหม่": "Check the Worker's Triggers in the Cloudflare dashboard and deploy again.",
+  "ทำงานล่าสุด <t:{time}:R>": "last ran <t:{time}:R>",
+  "ยังไม่ได้เชื่อมบัญชีอีเมล — ใช้ `/account add`": "No email account connected yet. Use `/account add`.",
+  "แจ้งเตือนเมลใหม่ล้มเหลวตั้งแต่ <t:{time}:R>: {why}": "New-mail checks failing since <t:{time}:R>: {why}",
+  "ตอนนี้ติดต่อได้ ({ms} ms) แต่รอบดึงเมลล่าสุดยังล้มเหลว": "reachable now ({ms} ms), but the last mail check failed",
+  "**สรุป:** มีปัญหา {count} รายการ": "**Summary:** {count} problem(s)",
+  "**สรุป:** ทุกอย่างทำงานปกติ": "**Summary:** everything is working",
+  "หน้าสถานะทางการ:": "Official status pages:",
   "เซิร์ฟเวอร์อีเมล": "the mail server",
   "ทำรายการไม่สำเร็จ": "That didn't work",
   "สาเหตุ:": "Why:",

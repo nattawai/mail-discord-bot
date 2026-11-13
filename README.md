@@ -21,6 +21,7 @@ A Discord bot for **Gmail and Outlook (multiple accounts)** that runs free on Cl
 | `/send account:…` | Send a new email from the chosen account |
 | `/inbox account:…` | Show unread mail. Leave the account empty to see all of them. |
 | `/clear` | Delete the bot's messages in the channel but keep unread mail. `/clear all:True` deletes everything. |
+| `/status` | Check what's working: the Worker, KV, the mail-check timer, Discord and each account. Anything down shows why, how to fix it, and since when it has failed. |
 
 Only users listed in `ALLOWED_USER_IDS` can use the buttons and commands. `/clear` is much faster when the bot has **Manage Messages** in the channel.
 
@@ -150,6 +151,10 @@ npx wrangler deploy
 ---
 
 ## Troubleshooting
+
+Start with `/status` in Discord. It tests every service live and links the official Google, Microsoft, Discord and Cloudflare status pages. When a button fails, the error message also says why and how to fix it.
+
+For the full log:
 
 ```bash
 npx wrangler tail

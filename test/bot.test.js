@@ -29,7 +29,7 @@ test("long mail is split into <=4000-char chunks without losing text", () => {
 
 test("commands are valid shapes", () => {
   const names = COMMANDS.map((c) => c.name);
-  assert.deepEqual(names, ["send", "inbox", "clear", "account"]);
+  assert.deepEqual(names, ["send", "status", "inbox", "clear", "account"]);
   const acct = COMMANDS.find((c) => c.name === "account");
   assert.deepEqual(acct.options.map((o) => o.name), ["list", "add", "rename", "remove"]);
   for (const c of COMMANDS) assert.ok(c.description.length <= 100);

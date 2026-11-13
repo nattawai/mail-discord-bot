@@ -23,6 +23,7 @@ import { explainError } from "./errors.js";
 import { TYPES, accountKeys, connectedProviders, provider, saveAccountKeys } from "./providers/index.js";
 import { K, clearTokens, isConnected } from "./tokens.js";
 import { tr } from "./i18n.js";
+import { heartbeat, recordPoll, statusReport } from "./status.js";
 
 const CHUNK = 4000;
 const autoClean = (env) => String(env.AUTO_CLEAN ?? "true").toLowerCase() !== "false";
@@ -127,6 +128,8 @@ export async function handleInteraction(request, env, ctx) {
         return later(ResponseType.DEFERRED_MESSAGE, () => clearChannel(env, it, Boolean(optionValue(it, "all"))));
       case "account":
         return accountCommand(env, it, origin, later);
+      case "status":
+        return later(ResponseType.DEFERRED_MESSAGE, async () => editOriginal(env, it, { content: (await statusReport(env, T, accountInfo)).slice(0, 2000) }));
     }
     return ephemeral(T("ไม่รู้จักคำสั่งนี้"));
   }
@@ -405,14 +408,18 @@ export function mentionOf(env) {
 }
 
 export async function pollAll(env) {
+  await heartbeat(env).catch((err) => console.error("heartbeat failed:", err));
   const accounts = await connectedProviders(env);
   const max = Math.max(2, Math.floor(20 / Math.max(1, accounts.length)));
   for (const p of accounts) {
+    let failure = null;
     try {
       await pollProvider(env, p, max);
     } catch (err) {
+      failure = err;
       console.error(`poll ${p.key} failed:`, err); // บัญชีหนึ่งพัง บัญชีอื่นยังทำงานต่อ
     }
+    await recordPoll(env, p, failure).catch(() => {}); // ให้ /status รู้ว่าล้มเหลวตั้งแต่เมื่อไร
   }
 }
 
